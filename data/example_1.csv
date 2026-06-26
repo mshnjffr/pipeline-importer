@@ -1,0 +1,2 @@
+reference_id,pipeline_name,status,started_at,finished_at,repository,commit_sha,head_branch,pr_number,email,github_username,gitlab_username,source_url
+pipeline-run-1001,Build and Test,success,2026-07-10T09:00:00Z,2026-07-10T09:12:30Z,example-org/example-service,a1b2c3d4e5f60718293a4b5c6d7e8f9001020304,main,,jane.doe@example.com,janedoe,,https://ci.example.com/pipelines/1001

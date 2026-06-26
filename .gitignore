@@ -5,6 +5,9 @@
 
 # Data files
 *.csv
+# ...but keep the committed example fixtures
+!data/example_1.csv
+!data/example_2.csv
 
 # Python
 __pycache__/

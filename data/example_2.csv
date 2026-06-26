@@ -1,0 +1,2 @@
+reference_id,pipeline_name,status,started_at,finished_at,repository,commit_sha,head_branch,pr_number,email,github_username,gitlab_username,source_url
+pipeline-run-1002,Deploy Production,failure,2026-07-11T14:30:00Z,2026-07-11T14:41:08Z,example-org/example-web,0f1e2d3c4b5a69788796a5b4c3d2e1f005060708,release/v2.0,42,john.smith@example.com,,johnsmith,https://ci.example.com/pipelines/1002

@@ -108,6 +108,7 @@ python main.py --dry-run sample_teamcity_pipeline_runs.csv
 | `--token-env` | Env var holding the API token. Defaults to `DATACLOUD_API_TOKEN`.  |
 | `--dry-run`   | Print payloads instead of sending them.                             |
 | `--limit N`   | Only process the first `N` data rows (across all files).            |
+| `--skip N`    | Skip the first `N` data rows (across all files). Resumes after a partial run — use the last row number printed by that run. |
 | `--sleep S`   | Seconds to wait between requests.                                   |
 | `--timeout S` | Per-request timeout in seconds. Defaults to `30`.                   |
 | `--fail-fast` | Stop after the first failed row.                                    |

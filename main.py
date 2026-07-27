@@ -61,6 +61,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--token-env", default=TOKEN_ENV, help=f"Token env var. Defaults to {TOKEN_ENV}.")
     parser.add_argument("--dry-run", action="store_true", help="Print payloads without sending them.")
     parser.add_argument("--limit", type=int, help="Only process the first N data rows.")
+    parser.add_argument(
+        "--skip",
+        type=int,
+        default=0,
+        help=(
+            "Skip the first N data rows (across all files) before processing. "
+            "Use this to resume after a partial/interrupted run: the row numbers "
+            "printed during a run are 1-indexed across all files, so --skip 9010 "
+            "resumes right after row 9010."
+        ),
+    )
     parser.add_argument("--sleep", type=float, default=0.0, help="Seconds to wait between requests.")
     parser.add_argument("--timeout", type=int, default=30, help="Request timeout in seconds.")
     parser.add_argument("--fail-fast", action="store_true", help="Stop after the first failed row.")
@@ -112,6 +123,7 @@ def settings_from_args(args: argparse.Namespace, source: str) -> Settings:
         sleep_seconds=args.sleep,
         timeout_seconds=args.timeout,
         fail_fast=args.fail_fast,
+        skip=args.skip,
         base_url=args.base_url,
         endpoint=args.endpoint,
     )

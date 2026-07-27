@@ -42,6 +42,13 @@ class DatacloudClient:
             return ApiResponse(False, exc.code, exc.read().decode("utf-8"))
         except URLError as exc:
             return ApiResponse(False, None, str(exc.reason))
+        except OSError as exc:
+            # Read timeouts (and other low-level socket errors, e.g. a reset
+            # connection) surface as raw OSError/TimeoutError from
+            # http.client.getresponse() rather than being wrapped in
+            # URLError, since urllib only wraps errors raised while sending
+            # the request, not while waiting for the response.
+            return ApiResponse(False, None, str(exc) or exc.__class__.__name__)
 
     @staticmethod
     def _body_is_ok(body: str) -> bool:

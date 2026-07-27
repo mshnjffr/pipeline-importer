@@ -8,6 +8,7 @@
 # ...but keep the committed example fixtures
 !data/example_1.csv
 !data/example_2.csv
+!data/example_3_multi_source.csv
 
 # Python
 __pycache__/

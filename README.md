@@ -4,8 +4,9 @@ A small, dependency-free Python CLI that reads CI/CD pipeline run rows from a CS
 file and upserts them into [DX](https://getdx.com) (Datacloud) via the
 `pipelineRuns.upsert` API.
 
-It was built around TeamCity exports but works with any CSV that matches the
-expected column layout.
+It was originally built around TeamCity exports, but works with CSV exports
+from any CI/CD system — you'll be asked which system the data came from (or
+you can set it per-row, see below).
 
 ## Requirements
 
@@ -50,11 +51,18 @@ your DX instance requires) are:
 | `github_username` | Author GitHub handle                         |
 | `gitlab_username` | Author GitLab handle                         |
 | `source_url`      | Link back to the build in the CI system      |
+| `source`          | CI/CD system for this row (e.g. `Jenkins`, `TeamCity`, `GitHub Actions`) |
 
-Empty values are dropped from each payload. `pipeline_source` is added
-automatically from `--source` (defaults to `TeamCity`).
+Empty values are dropped from each payload. `pipeline_source` is set from
+each row's `source` column when present; otherwise it falls back to
+`--source`. If `--source` isn't provided, you'll be prompted for a default
+at startup — this lets you import CSVs from a single CI/CD system without
+adding a `source` column to every row. If you're importing rows from
+multiple CI/CD systems in one CSV, add a `source` column and set it per row
+instead — that value takes precedence over the default for that row.
 
-See `sample_teamcity_pipeline_runs.csv` for a complete example.
+See `sample_teamcity_pipeline_runs.csv` for a complete example, or
+`data/example_3_multi_source.csv` for a CSV with a per-row `source` column.
 
 ## Usage
 
@@ -96,7 +104,7 @@ python main.py --dry-run sample_teamcity_pipeline_runs.csv
 | `--env-file`  | Path to the `.env` file. Defaults to `.env`.                        |
 | `--base-url`  | DX base URL (overrides `DATACLOUD_BASE_URL`).                        |
 | `--endpoint`  | Full `pipelineRuns.upsert` URL (overrides `--base-url`).             |
-| `--source`    | Pipeline source name. Defaults to `TeamCity`.                       |
+| `--source`    | Default pipeline source name. Prompted for interactively if omitted. Overridden per-row by a CSV `source` column. |
 | `--token-env` | Env var holding the API token. Defaults to `DATACLOUD_API_TOKEN`.  |
 | `--dry-run`   | Print payloads instead of sending them.                             |
 | `--limit N`   | Only process the first `N` data rows (across all files).            |

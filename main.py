@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Upload TeamCity pipeline runs from a CSV file to Datacloud."""
+"""Upload CI/CD pipeline runs from a CSV file to Datacloud."""
 
 from __future__ import annotations
 
@@ -50,7 +50,14 @@ def parse_args() -> argparse.Namespace:
         "--endpoint",
         help="Full pipelineRuns.upsert URL. Overrides --base-url.",
     )
-    parser.add_argument("--source", default="TeamCity", help="Pipeline source name. Defaults to TeamCity.")
+    parser.add_argument(
+        "--source",
+        help=(
+            "Default pipeline source name (e.g. TeamCity, Jenkins, GitHub Actions). "
+            "If omitted, you'll be prompted for it. A CSV row with its own 'source' "
+            "column value overrides this default for that row."
+        ),
+    )
     parser.add_argument("--token-env", default=TOKEN_ENV, help=f"Token env var. Defaults to {TOKEN_ENV}.")
     parser.add_argument("--dry-run", action="store_true", help="Print payloads without sending them.")
     parser.add_argument("--limit", type=int, help="Only process the first N data rows.")
@@ -60,12 +67,45 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def settings_from_args(args: argparse.Namespace) -> Settings:
+def resolve_source(cli_source: str | None) -> str:
+    """Resolve the default pipeline source, prompting interactively if needed.
+
+    Rows with their own 'source' column still override this per-row (see
+    PipelineRunPayload), so this is only the fallback for rows that don't.
+    """
+
+    if cli_source:
+        return cli_source
+
+    if not sys.stdin.isatty():
+        raise ConfigError(
+            "No --source provided and input is not interactive. Pass --source "
+            "(e.g. --source Jenkins) or add a 'source' column to your CSV."
+        )
+
+    try:
+        source = input(
+            "Which CI/CD system is this data from? (e.g. TeamCity, Jenkins, "
+            "GitHub Actions): "
+        ).strip()
+    except EOFError:
+        source = ""
+
+    if not source:
+        raise ConfigError(
+            "A pipeline source is required. Pass --source or add a 'source' "
+            "column to your CSV."
+        )
+
+    return source
+
+
+def settings_from_args(args: argparse.Namespace, source: str) -> Settings:
     return Settings(
         csv_paths=tuple(Path(path) for path in args.csv_paths),
         csv_dir=Path(args.csv_dir) if args.csv_dir else None,
         env_file=Path(args.env_file),
-        source=args.source,
+        source=source,
         token_env=args.token_env,
         dry_run=args.dry_run,
         limit=args.limit,
@@ -78,7 +118,15 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
 
 
 def main() -> int:
-    settings = settings_from_args(parse_args())
+    args = parse_args()
+
+    try:
+        source = resolve_source(args.source)
+    except ConfigError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    settings = settings_from_args(args, source)
     EnvFile.load(settings.env_file)
 
     try:

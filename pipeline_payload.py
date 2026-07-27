@@ -22,13 +22,15 @@ class PipelineRunPayload:
         "source_url",
     )
 
-    def __init__(self, source: str) -> None:
-        self.source = source
+    def __init__(self, default_source: str) -> None:
+        self.default_source = default_source
 
     def from_csv_row(self, raw_row: dict[str, str | None]) -> dict[str, Any]:
         row = self._clean_row(raw_row)
 
-        payload: dict[str, Any] = {"pipeline_source": self.source}
+        payload: dict[str, Any] = {
+            "pipeline_source": row.get("source") or self.default_source
+        }
         for field in self.FIELDS:
             value = row.get(field)
             if value:

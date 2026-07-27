@@ -31,6 +31,7 @@ class Settings:
     sleep_seconds: float
     timeout_seconds: int
     fail_fast: bool
+    skip: int
     base_url: str | None = None
     endpoint: str | None = None
     csv_dir: Path | None = None

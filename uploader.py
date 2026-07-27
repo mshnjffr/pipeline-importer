@@ -16,6 +16,7 @@ class PipelineRunUploader:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.mapper = PipelineRunPayload(settings.source)
+        self._rows_seen = 0
 
     def run(self) -> int:
         csv_files = self.settings.resolve_csv_files()
@@ -27,6 +28,8 @@ class PipelineRunUploader:
 
         client = self._client()
         print(f"Found {len(csv_files)} CSV file(s) to process.")
+        if self.settings.skip:
+            print(f"Skipping the first {self.settings.skip} row(s).")
 
         processed = 0
         failures = 0
@@ -60,11 +63,15 @@ class PipelineRunUploader:
             reader = csv.DictReader(csv_file)
 
             for raw_row in reader:
+                self._rows_seen += 1
+                if self._rows_seen <= self.settings.skip:
+                    continue
+
                 if self._budget_reached(already_processed + processed):
                     return processed, failures, False
 
                 processed += 1
-                failed = self._process_row(client, raw_row, already_processed + processed)
+                failed = self._process_row(client, raw_row, self._rows_seen)
                 failures += int(failed)
 
                 if failed and self.settings.fail_fast:

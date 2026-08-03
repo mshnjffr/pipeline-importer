@@ -1,6 +1,6 @@
 # pipeline-import
 
-A small, dependency-free Python CLI that reads CI/CD pipeline run rows from a CSV
+A small Python CLI that reads CI/CD pipeline run rows from a CSV
 file and upserts them into [DX](https://getdx.com) (Datacloud) via the
 `pipelineRuns.upsert` API.
 
@@ -11,7 +11,7 @@ you can set it per-row, see below).
 ## Requirements
 
 - Python 3.10+ (uses `from __future__ import annotations` and `X | None` typing)
-- No third-party packages — it relies only on the Python standard library.
+- One Python dependency: `aiohttp` (see setup below).
 
 ## Setup
 
@@ -26,6 +26,14 @@ cp .env.example .env
 ```dotenv
 DATACLOUD_API_TOKEN=your-api-token-here
 DATACLOUD_BASE_URL=https://your-instance.getdx.net
+```
+
+3. Create and activate a virtual environment, then install dependencies:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 ```
 
 The `.env` file and any `*.csv` files are git-ignored so secrets and data are
@@ -110,6 +118,7 @@ python main.py --dry-run sample_teamcity_pipeline_runs.csv
 | `--limit N`   | Only process the first `N` data rows (across all files).            |
 | `--skip N`    | Skip the first `N` data rows (across all files). Resumes after a partial run — use the last row number printed by that run. |
 | `--sleep S`   | Seconds to wait between requests.                                   |
+| `--workers N` | Number of concurrent in-flight requests. Defaults to `100`.         |
 | `--timeout S` | Per-request timeout in seconds. Defaults to `30`.                   |
 | `--fail-fast` | Stop after the first failed row.                                    |
 

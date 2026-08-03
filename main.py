@@ -73,9 +73,18 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("--sleep", type=float, default=0.0, help="Seconds to wait between requests.")
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=100,
+        help="Number of concurrent in-flight requests. Defaults to 100.",
+    )
     parser.add_argument("--timeout", type=int, default=30, help="Request timeout in seconds.")
     parser.add_argument("--fail-fast", action="store_true", help="Stop after the first failed row.")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.workers < 1:
+        parser.error("--workers must be >= 1.")
+    return args
 
 
 def resolve_source(cli_source: str | None) -> str:
@@ -121,6 +130,7 @@ def settings_from_args(args: argparse.Namespace, source: str) -> Settings:
         dry_run=args.dry_run,
         limit=args.limit,
         sleep_seconds=args.sleep,
+        workers=args.workers,
         timeout_seconds=args.timeout,
         fail_fast=args.fail_fast,
         skip=args.skip,

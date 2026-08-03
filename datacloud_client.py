@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass
 from typing import Any
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+
+import aiohttp
 
 
 @dataclass(frozen=True)
@@ -21,33 +22,32 @@ class DatacloudClient:
         self.endpoint = endpoint
         self.token = token
         self.timeout_seconds = timeout_seconds
+        self._timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
+        self._headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json",
+        }
 
-    def upsert_pipeline_run(self, payload: dict[str, Any]) -> ApiResponse:
-        request = Request(
-            self.endpoint,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Accept": "application/json",
-                "Authorization": f"Bearer {self.token}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
-
+    async def upsert_pipeline_run(self, session: aiohttp.ClientSession, payload: dict[str, Any]) -> ApiResponse:
         try:
-            with urlopen(request, timeout=self.timeout_seconds) as response:
-                body = response.read().decode("utf-8")
-                return ApiResponse(self._body_is_ok(body), response.status, body)
-        except HTTPError as exc:
-            return ApiResponse(False, exc.code, exc.read().decode("utf-8"))
-        except URLError as exc:
-            return ApiResponse(False, None, str(exc.reason))
+            async with session.post(
+                self.endpoint,
+                data=json.dumps(payload).encode("utf-8"),
+                headers=self._headers,
+                timeout=self._timeout,
+            ) as response:
+                body = await response.text()
+                return ApiResponse(
+                    ok=(response.status < 400 and self._body_is_ok(body)),
+                    status_code=response.status,
+                    body=body,
+                )
+        except asyncio.TimeoutError:
+            return ApiResponse(False, None, "request timeout")
+        except aiohttp.ClientError as exc:
+            return ApiResponse(False, None, str(exc) or exc.__class__.__name__)
         except OSError as exc:
-            # Read timeouts (and other low-level socket errors, e.g. a reset
-            # connection) surface as raw OSError/TimeoutError from
-            # http.client.getresponse() rather than being wrapped in
-            # URLError, since urllib only wraps errors raised while sending
-            # the request, not while waiting for the response.
             return ApiResponse(False, None, str(exc) or exc.__class__.__name__)
 
     @staticmethod

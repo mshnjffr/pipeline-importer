@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 
@@ -34,7 +35,10 @@ class PipelineRunPayload:
         for field in self.FIELDS:
             value = row.get(field)
             if value:
-                payload[field] = value
+                if field in {"started_at", "finished_at"}:
+                    payload[field] = self._normalize_timestamp(value)
+                else:
+                    payload[field] = value
 
         return payload
 
@@ -45,3 +49,19 @@ class PipelineRunPayload:
             for key, value in row.items()
             if key is not None
         }
+
+    @staticmethod
+    def _normalize_timestamp(value: str) -> str:
+        candidate = value.strip()
+        if not candidate:
+            return candidate
+
+        parse_value = f"{candidate[:-1]}+00:00" if candidate.endswith("Z") else candidate
+        try:
+            parsed = datetime.fromisoformat(parse_value)
+        except ValueError:
+            return candidate
+
+        if parsed.tzinfo is None:
+            return f"{parsed.isoformat(timespec='seconds')}Z"
+        return parsed.isoformat(timespec="seconds").replace("+00:00", "Z")

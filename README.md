@@ -1,6 +1,6 @@
 # pipeline-import
 
-A small, dependency-free Python CLI that reads CI/CD pipeline run rows from a CSV
+A small Python CLI that reads CI/CD pipeline run rows from a CSV
 file and upserts them into [DX](https://getdx.com) (Datacloud) via the
 `pipelineRuns.upsert` API.
 
@@ -11,7 +11,7 @@ you can set it per-row, see below).
 ## Requirements
 
 - Python 3.10+ (uses `from __future__ import annotations` and `X | None` typing)
-- No third-party packages — it relies only on the Python standard library.
+- One Python dependency: `aiohttp` (see setup below).
 
 ## Setup
 
@@ -28,6 +28,18 @@ DATACLOUD_API_TOKEN=your-api-token-here
 DATACLOUD_BASE_URL=https://your-instance.getdx.net
 ```
 
+3. Install dependencies:
+
+```bash
+# If using an environment manager like `venv`
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+
+# No ennvironment manager
+python -m pip install -r requirements.txt
+```
+
 The `.env` file and any `*.csv` files are git-ignored so secrets and data are
 never committed.
 
@@ -36,21 +48,21 @@ never committed.
 The first row must be a header. Recognized columns (all optional except those
 your DX instance requires) are:
 
-| Column            | Description                                  |
-| ----------------- | -------------------------------------------- |
-| `reference_id`    | Unique ID for the pipeline run (upsert key)  |
-| `pipeline_name`   | Name of the pipeline / build configuration   |
-| `status`          | e.g. `success`, `failed`                     |
-| `started_at`      | ISO 8601 timestamp                           |
-| `finished_at`     | ISO 8601 timestamp                           |
-| `repository`      | `org/repo`                                    |
-| `commit_sha`      | Commit hash                                  |
-| `head_branch`     | Branch name                                  |
-| `pr_number`       | Pull request number                          |
-| `email`           | Author email                                 |
-| `github_username` | Author GitHub handle                         |
-| `gitlab_username` | Author GitLab handle                         |
-| `source_url`      | Link back to the build in the CI system      |
+| Column            | Description                                                              |
+| ----------------- | ------------------------------------------------------------------------ |
+| `reference_id`    | Unique ID for the pipeline run (upsert key)                              |
+| `pipeline_name`   | Name of the pipeline / build configuration                               |
+| `status`          | e.g. `success`, `failed`                                                 |
+| `started_at`      | ISO 8601 timestamp                                                       |
+| `finished_at`     | ISO 8601 timestamp                                                       |
+| `repository`      | `org/repo`                                                               |
+| `commit_sha`      | Commit hash                                                              |
+| `head_branch`     | Branch name                                                              |
+| `pr_number`       | Pull request number                                                      |
+| `email`           | Author email                                                             |
+| `github_username` | Author GitHub handle                                                     |
+| `gitlab_username` | Author GitLab handle                                                     |
+| `source_url`      | Link back to the build in the CI system                                  |
 | `source`          | CI/CD system for this row (e.g. `Jenkins`, `TeamCity`, `GitHub Actions`) |
 
 Empty values are dropped from each payload. `pipeline_source` is set from
@@ -97,33 +109,34 @@ python main.py --dry-run sample_teamcity_pipeline_runs.csv
 
 ### Options
 
-| Flag          | Description                                                          |
-| ------------- | ------------------------------------------------------------------- |
-| `CSV ...`     | Zero or more CSV files/directories. Defaults to the drop-in dir.    |
-| `--csv-dir`   | Drop-in directory scanned for `*.csv` (overrides `DATACLOUD_CSV_DIR`). |
-| `--env-file`  | Path to the `.env` file. Defaults to `.env`.                        |
-| `--base-url`  | DX base URL (overrides `DATACLOUD_BASE_URL`).                        |
-| `--endpoint`  | Full `pipelineRuns.upsert` URL (overrides `--base-url`).             |
-| `--source`    | Default pipeline source name. Prompted for interactively if omitted. Overridden per-row by a CSV `source` column. |
-| `--token-env` | Env var holding the API token. Defaults to `DATACLOUD_API_TOKEN`.  |
-| `--dry-run`   | Print payloads instead of sending them.                             |
-| `--limit N`   | Only process the first `N` data rows (across all files).            |
+| Flag          | Description                                                                                                                 |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `CSV ...`     | Zero or more CSV files/directories. Defaults to the drop-in dir.                                                            |
+| `--csv-dir`   | Drop-in directory scanned for `*.csv` (overrides `DATACLOUD_CSV_DIR`).                                                      |
+| `--env-file`  | Path to the `.env` file. Defaults to `.env`.                                                                                |
+| `--base-url`  | DX base URL (overrides `DATACLOUD_BASE_URL`).                                                                               |
+| `--endpoint`  | Full `pipelineRuns.upsert` URL (overrides `--base-url`).                                                                    |
+| `--source`    | Default pipeline source name. Prompted for interactively if omitted. Overridden per-row by a CSV `source` column.           |
+| `--token-env` | Env var holding the API token. Defaults to `DATACLOUD_API_TOKEN`.                                                           |
+| `--dry-run`   | Print payloads instead of sending them.                                                                                     |
+| `--limit N`   | Only process the first `N` data rows (across all files).                                                                    |
 | `--skip N`    | Skip the first `N` data rows (across all files). Resumes after a partial run — use the last row number printed by that run. |
-| `--sleep S`   | Seconds to wait between requests.                                   |
-| `--timeout S` | Per-request timeout in seconds. Defaults to `30`.                   |
-| `--fail-fast` | Stop after the first failed row.                                    |
+| `--sleep S`   | Seconds to wait between requests.                                                                                           |
+| `--workers N` | Number of concurrent in-flight requests. Defaults to `100`.                                                                 |
+| `--timeout S` | Per-request timeout in seconds. Defaults to `30`.                                                                           |
+| `--fail-fast` | Stop after the first failed row.                                                                                            |
 
 The process exits with code `0` on full success, `1` if any row failed, and `2`
 on configuration errors (e.g. missing token or base URL).
 
 ## Project layout
 
-| File                              | Responsibility                                            |
-| --------------------------------- | --------------------------------------------------------- |
-| `main.py`                         | CLI entry point and argument parsing.                     |
-| `config.py`                       | Settings, `.env` loading, and endpoint resolution.        |
-| `uploader.py`                     | Reads the CSV and orchestrates per-row upserts.           |
-| `pipeline_payload.py`             | Maps a CSV row to the API payload.                        |
-| `datacloud_client.py`             | Minimal HTTP client for the DX API.                       |
-| `data/`                           | Default drop-in directory for `*.csv` files.              |
-| `sample_teamcity_pipeline_runs.csv` | Example input data.                                     |
+| File                                | Responsibility                                     |
+| ----------------------------------- | -------------------------------------------------- |
+| `main.py`                           | CLI entry point and argument parsing.              |
+| `config.py`                         | Settings, `.env` loading, and endpoint resolution. |
+| `uploader.py`                       | Reads the CSV and orchestrates per-row upserts.    |
+| `pipeline_payload.py`               | Maps a CSV row to the API payload.                 |
+| `datacloud_client.py`               | Minimal HTTP client for the DX API.                |
+| `data/`                             | Default drop-in directory for `*.csv` files.       |
+| `sample_teamcity_pipeline_runs.csv` | Example input data.                                |

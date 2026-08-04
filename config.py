@@ -29,6 +29,7 @@ class Settings:
     dry_run: bool
     limit: int | None
     sleep_seconds: float
+    workers: int
     timeout_seconds: int
     fail_fast: bool
     skip: int
